@@ -44,9 +44,10 @@ function upload($conn) {
 
             move_uploaded_file($_FILES["model_to_upload"]["tmp_name"], $temp_file);
             $model_content = file_get_contents($temp_file);
+            unlink($temp_file);
         }
 
-        if (isset($_POST["model_content"])) {
+        if (isset($_POST["model_content"]) && $_POST["model_content"] !== "") {
             $model_content = mysql_fix_string($conn, $_POST["model_content"]);
         }
 
