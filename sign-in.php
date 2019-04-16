@@ -11,8 +11,7 @@ echo <<<_END
 
 
 <div class="d-flex justify-content-center align-content-center">
-      <form action="action/signin" method="post" class="form-signin" onsubmit="return validate(this, '#errorMessage')"
-novalidate>
+      <form action="upload.php" method="post" class="form-signin" >
         <h2 class="form-signin-heading">Sign In Page</h2>
         <label for="inputEmail" class="sr-only">Email address</label>
         <input type="email" name="inputEmail" id="inputEmail" class="form-control" placeholder="Email address" autofocus>
@@ -25,5 +24,10 @@ novalidate>
         </div>
         <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
       </form>
+      
+      <form method="post" action="sign-up.php">
+					<button type="submit">SIGN UP PAGE</button>
+	    </form>
+
 </div>
 _END;

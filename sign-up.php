@@ -10,9 +10,9 @@ echo <<<_END
 
 
 <div class="d-flex justify-content-center align-content-center">
-      <form action="action/signup" method="post" class="form-sign-up" onsubmit="return validate(this, '#errorMessage')"
+      <form action="sign-in.php" method="post" class="form-sign-up" onsubmit="return validate(this, '#errorMessage')"
 novalidate>
-        <h2 class="form-signin-heading">SIGN UP PAGE</h2>
+        <h2 class="form-signup-heading">SIGN UP PAGE</h2>
         <label for="inputEmail" class="sr-only">Email address</label>
         <input type="email" name="inputEmail" id="inputEmail" class="form-control" placeholder="Email address" autofocus>
         <label for="inputPassword" class="sr-only">Password</label>
