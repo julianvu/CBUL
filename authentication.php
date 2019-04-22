@@ -1,91 +1,89 @@
 <?php
 /**
  * Created by PhpStorm.
- * User: anisdhapa
- * Date: 2019-04-15
- * Time: 20:17
+ * User: anisd11
+ * Date: 2019-04-20
+ * Time: 14:10
  */
 
 
-Class Authentication
+require_once 'login.php';
+require_once 'utilities.php';
+
+//start the session
+session_start();
+
+/**
+ * Authenticate the User
+ *
+ * Authenticate the user based on username and password. First, find the
+ * user id based on username and compare user password with input password
+ *
+ * @param $conn database
+ */
+function authenticate($conn)
 {
 
+    $username = utilities::sanitizeMySQL($conn, $_POST['inputUsername']);
+    $password = utilities::sanitizeMySQL($conn, $_POST['inputPassword']);
 
-    function sanitizeString($var)
+    $user_id = utilities::findUser($username, $conn);
+
+
+    //check user with given email id exists and check the password is correct or not
+    if($user_id == null || !isPassword($user_id,$password,$conn))
     {
-        $var = stripslashes($var);
-        $var = strip_tags($var);
-        $var = htmlentities($var);
-        return $var;
+        loginfail("invalid user email or password");
     }
 
-
-    /**
-     * Sanitizes a string in preparation for database queries
-     *
-     * JV: This function really should be placed in a different file where similar
-     * utility functions are. It's here for now because I need it to develop
-     * without dependencies.
-     *
-     * @param $connection    MySQL connection
-     * @param $var   String to sanitize
-     * @return     Sanitized string
-     */
-    function sanitizeMySQL($var, $connection)
-    {
-
-        $var = $connection->real_escape_string($var);
-        $var = sanitizeString($var);
-        return $var;
-    }
+    loginUser($user_id);
+}
 
 
-    /**
-     * this functions should not be here.
-     * @param $hn
-     * @param $un
-     * @param $pw
-     * @param $db
-     * @return mysqli
-     */
-    function databaseCreation($hn, $un, $pw, $db)
-    {
-        $conn = new mysqli($hn, $un, $pw);
-        if ($conn->connect_error) die($conn->connect_error);
-        $query = "CREATE DATABASE IF NOT EXISTS $db";
-        if ($conn->query($query) === FALSE) {
-            echo "Error in database: " . $conn->error;
-        }
-        echo "<br>";
-
-
-        mysqli_select_db($conn, $db) or die($conn->error);
-        $query = "CREATE TABLE IF NOT EXISTS userInfo(
-      id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      email VARCHAR(320) NOT NULL,
-      username VARCHAR(32) NOT NULL,
-      password VARCHAR(32) NOT NULL 
-    )";
-
-        $result = $conn->query($query);
-        if (!$result) die ("Database access failed: " . $conn->error);
-        return $conn;
-    }
-
-
-    public function authenticate()
-    {
-        $userID = $this->findUser($email, $conn);
-    }
-
-    public function findUser($email, $conn) {
-        // $email = sanitizeMySQL($conn, $email);
-
-        $sql = "SELECT * FROM thr_users WHERE email = '$email'";
-        $result = $conn->query($sql) or die($conn->error);
-        $row = $result->fetch_assoc();
-        return $row['id'];
-    }
+/**
+ * Set the error message and refresh the page with error shown on the page
+ *
+ * @param $msg error message
+ */
+function loginfail($msg)
+{
+    $_SESSION['err_mess'] = $msg;
+    header("Location: sign-in.php");
+    die("Dieing");
 
 }
 
+/**
+ * Validate the input password with User password
+ *
+ * Validate hashed input password with User hashed password store in database
+ * @param $id User id
+ * @param $inputPassword input password
+ * @param $conn Database
+ * @return bool
+ */
+function isPassword($id, $inputPassword, $conn){
+    return (utilities::hashPassword($inputPassword) === utilities::getUserPassword($id, $conn));
+}
+
+/**
+ * Set the Session for User
+ *
+ * @param $id User id
+ */
+function loginUser($id)
+{
+    $_SESSION['check'] = hash('ripemd128', $_SERVER['REMOTE_ADDR'] .$_SERVER['HTTP_USER_AGENT']);
+    $_SESSION['initiated'] = true;
+    $_SESSION['id'] = $id;
+    $_SESSION['isLogged'] = true;
+    ini_set('session.gc_maxlifetime', 60 * 60 * 24);
+    header("Location:upload.php");
+    die();
+
+
+}
+
+
+$conn = utilities::databaseCreation($hn,$un,$pw,$db);
+authenticate($conn);
