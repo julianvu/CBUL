@@ -40,7 +40,7 @@ function register($conn)
             header("Location: sign-in.php");
 
         } else {
-            $_SESSION['err_mess'] = "Username already exists. User other username that do not have account";
+            $_SESSION['err_mess'] = "Username already exists. Choose another username that does not have an account";
             header("Location: sign-up.php");
 
         }
