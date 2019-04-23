@@ -1,9 +1,6 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: anisd11
- * Date: 2019-04-20
- * Time: 13:19
+ * Created by Anis Dhapa
  */
 
 
@@ -47,7 +44,9 @@ class utilities
             id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, 
             username VARCHAR(64) NOT NULL,
             email VARCHAR(64) NOT NULL,
-            password VARCHAR(128) NOT NULL
+            password VARCHAR(128) NOT NULL,
+            salty VARCHAR(128) NOT NULL,
+            saltier VARCHAR(128) NOT NULL
         )";
 
         $result2 = $conn->query($query2);
@@ -97,31 +96,12 @@ class utilities
      * @param $string string to hash
      * @return string hashed string
      */
-    public static function hashPassword($string){
-        $salt1 = 'AB%43';
-        $salt2 = 'AB%4323';
+    public static function hashPassword($string, $salt1, $salt2){
         return hash('ripemd128', $salt1.$string.$salt2);
 
     }
 
-    /**
-     * Get the User password
-     *
-     * Get the user password from USER Table in database
-     * @param $id User Id
-     * @param $conn Database Connection
-     */
-    public static function getUserPassword($id, $conn)
-    {
-
-        $query = "SELECT * FROM USER WHERE id = $id";
-        $result = $conn->query(sprintf($query, $id));
-        if (!$result) return;
-        $row = $result->fetch_assoc() or die($conn->error);
-
-        return $row['password'];
-
-    }
+    
 
     /**
      * Get the User ID from username

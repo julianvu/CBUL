@@ -19,7 +19,7 @@ require_once 'utilities.php';
  */
 function upload($conn) {
     if (isset($_POST["model_name"])) {
-        $model_name = utilities::mysql_fix_string($conn, $_POST["model_name"]);
+        $model_name = utilities::sanitizeMySQL($conn, $_POST["model_name"]);
 
         if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"])) {
             $temp_file = $_FILES["model_to_upload"]["name"];
@@ -35,7 +35,7 @@ function upload($conn) {
         }
 
         if (isset($_POST["model_content"]) && $_POST["model_content"] !== "") {
-            $model_content = utilities::mysql_fix_string($conn, $_POST["model_content"]);
+            $model_content = utilities::sanitizeMySQL($conn, $_POST["model_content"]);
         }
 
         $query = "INSERT INTO datasets VALUES" . "('$model_name', '$model_content')";

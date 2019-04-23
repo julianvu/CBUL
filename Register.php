@@ -1,9 +1,6 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: anisd11
- * Date: 2019-04-20
- * Time: 21:03
+ * Created by Anis Dhapa
  */
 
 require_once 'login.php';
@@ -27,7 +24,7 @@ function register($conn)
     $user_id = utilities::findUser($username, $conn);
 
     //
-    if($user_id == null && $password == null && $email == null && $user_id == '' && $password == '' && $email == ''){
+    if($username == null || $password == null || $email == null || $username == '' || $password == '' || $email == ''){
         $_SESSION['err_mess'] = "Username, Email and password field cannot be empty";
         header("Location: sign-up.php");
 
@@ -60,8 +57,10 @@ function register($conn)
  */
 function addUser($username,$email, $password, $conn)
 {
-    $hashPassword = utilities::hashPassword($password);
-    $query = "INSERT INTO USER (username,email,password) VALUES('$username','$email','$hashPassword')";
+    $salt = random_bytes(5);
+    $saltier = random_bytes(5);
+    $hashPassword = utilities::hashPassword($password, $salt, $saltier);
+    $query = "INSERT INTO USER (username,email,password, salty, saltier) VALUES('$username','$email','$hashPassword', '$salt', '$saltier')";
     $result = $conn->query($query);
     if (!$result) die("insert failed".$conn->error);
 

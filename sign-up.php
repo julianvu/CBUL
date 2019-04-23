@@ -1,9 +1,6 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: anisdhapa
- * Date: 2019-04-15
- * Time: 07:38
+ * Created by Anis Dhapa
  */
 
 

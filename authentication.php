@@ -1,9 +1,6 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: anisd11
- * Date: 2019-04-20
- * Time: 14:10
+ * Created by Anis Dhapa
  */
 
 
@@ -63,7 +60,12 @@ function loginfail($msg)
  * @return bool
  */
 function isPassword($id, $inputPassword, $conn){
-    return (utilities::hashPassword($inputPassword) === utilities::getUserPassword($id, $conn));
+    $query = "SELECT * FROM USER WHERE id = $id";
+    $result = $conn->query(sprintf($query, $id));
+    if (!$result) return;
+    $row = $result->fetch_assoc() or die($conn->error);
+
+    return ($row['password'] === utilities::hashPassword($inputPassword,$row['salty'], $row['saltier']));
 }
 
 /**
