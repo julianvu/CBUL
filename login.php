@@ -7,6 +7,6 @@
  */
     $hn = "localhost";
     $un = "root";
-    $pw = "";
+    $pw = "password";
     $db = "inputs";
 

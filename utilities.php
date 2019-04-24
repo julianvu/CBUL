@@ -52,8 +52,16 @@ class utilities
 
         $result2 = $conn->query($query2);
 
-        if (!$result2) die ("Database access failed: " . $conn->error);
+        if (!$result2) self::mysql_fatal_error("Can not create table user", $conn);
 
+        //Create table for user database
+        $query = "CREATE TABLE IF NOT EXISTS userDataPlots (
+                  x INTEGER NOT NULL,
+                  y INTEGER NOT NULL,
+                  username VARCHAR(64) NOT NULL)";
+
+        $result2 = $conn->query($query);
+        if(!$result2) self::mysql_fatal_error("Can not creat table for user data:", $conn);
         return $conn;
     }
 
@@ -141,5 +149,25 @@ class utilities
         return $row['id'];
     }
 
+    /**
+     * Print an error message on screen
+     *
+     * @param $msg Custom message to display
+     * @param $conn Connection to display connection status
+     */
+    public static function mysql_fatal_error($msg, $conn)
+    {
+        $msg2 = mysqli_error($conn);
+        echo <<<_END
+We are not able to complete the requested task. The error message was: 
+<p> $msg: $msg2 </p> 
+Please clock the back button on your browser and try again. 
+_END;
+    }
 
+    public static function mysql_fix_string($connection, $string)
+    {
+        if(get_magic_quotes_gpc()) $string = stripcslashes($string);
+        return $connection->real_escape_string($string);
+    }
 }

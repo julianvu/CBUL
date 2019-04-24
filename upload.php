@@ -17,32 +17,6 @@ require_once 'utilities.php';
  *
  * @param $conn     MySQL connection
  */
-function upload($conn) {
-    if (isset($_POST["model_name"])) {
-        $model_name = utilities::mysql_fix_string($conn, $_POST["model_name"]);
-
-        if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"])) {
-            $temp_file = $_FILES["model_to_upload"]["name"];
-            $uploaded_model_ext = pathinfo($temp_file, PATHINFO_EXTENSION);
-            if ($uploaded_model_ext !== "txt") {
-                echo "File type error - File not TXT";
-                return;
-            }
-
-            move_uploaded_file($_FILES["model_to_upload"]["tmp_name"], $temp_file);
-            $model_content = file_get_contents($temp_file);
-            unlink($temp_file);
-        }
-
-        if (isset($_POST["model_content"]) && $_POST["model_content"] !== "") {
-            $model_content = utilities::mysql_fix_string($conn, $_POST["model_content"]);
-        }
-
-        $query = "INSERT INTO datasets VALUES" . "('$model_name', '$model_content')";
-        $result = $conn->query($query);
-        if (!$result) die ("Insertion failed: " . $conn->error);
-    }
-}
 session_start();
 $user_id = '';
 if (isset($_SESSION['id'])) {
@@ -78,8 +52,85 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
         </body>
         </html>
 _END;
-
     $conn->close();
 }else{
     echo "You are not allowed to access this page without authentication";
+}
+function readFileContents($conn)
+{
+    if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"])) {
+        $temp_file = $_FILES["model_to_upload"]["name"];
+        $uploaded_model_ext = pathinfo($temp_file, PATHINFO_EXTENSION);
+        if ($uploaded_model_ext !== "txt") {
+            echo "File type error - File not TXT";
+            return;
+        }
+
+        //move_uploaded_file($_FILES["model_to_upload"]["tmp_name"], $temp_file);
+        //$model_content = file_get_contents($temp_file);
+        //Read text file
+        $name = $_FILES["model_to_upload"]["tmp_name"];
+        $fp = fopen($name, 'r');
+        $content = fread($fp, filesize($name));
+        $lines = explode("\n", $content);
+        fclose($fp);
+        foreach ($lines as $line)
+        {
+            utilities::sanitizeMySQL($conn, $line);
+            storeLine($line, $conn);
+        }
+    }
+}
+
+function upload($conn) {
+    if (isset($_POST["model_name"])) {
+        $model_name = utilities::mysql_fix_string($conn, $_POST["model_name"]);
+
+        readFileContents($conn);
+
+        $model_content = "";
+        if (isset($_POST["model_content"]) && $_POST["model_content"] !== "") {
+            $model_content = utilities::mysql_fix_string($conn, $_POST["model_content"]);
+        }
+    }
+}
+
+function storeLine($value, $conn)
+{
+
+    $arrX = [];
+    //for x values
+    if(preg_match_all("/\(\d*?\,/", $value, $xs))
+    {
+        foreach ($xs as $row)
+        {
+            for($i = 0; $i < sizeof($row); $i++)
+            {
+                $arrX[$i] = substr($row[$i], 1, -1);
+            }
+        }
+    }
+
+    $arrY = [];
+    if(preg_match_all("/\,\d*?\)/", $value, $ys))
+    {
+        foreach ($ys as $row)
+        {
+            for($i = 0; $i < sizeof($row); $i++)
+            {
+                $arrY[$i] = substr($row[$i], 1, -1);
+            }
+        }
+    }
+    $user_id = $_SESSION['id'];
+    if(sizeof($arrX) == sizeof($arrY))
+    {
+        for($i = 0; $i < sizeof($arrX); $i++)
+        {
+            $query = "INSERT INTO userDataPlots (x, y, username) VALUES('$arrX[$i]', '$arrY[$i]', '$user_id')";
+            $result = $conn->query($query);
+            if (!$result) die("insert of file plot failed".$conn->error);
+        }
+
+    }else die("Bad Data");
 }
