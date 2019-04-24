@@ -19,7 +19,6 @@ if (!isset($_SESSION['initiated']))
     $_SESSION['initiated'] = 1;
 }
 
-
 if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_ADDR'] .
         $_SERVER['HTTP_USER_AGENT'])) {
     $conn = utilities::databaseCreation($hn, $un, $pw, $db);
@@ -67,6 +66,12 @@ function readFileContents($conn)
             utilities::sanitizeMySQL($conn, $line);
             storeLine($line, $conn);
         }
+    }
+
+    if(isset($_POST["model_content"]))
+    {
+        utilities::sanitizeMySQL($conn, $_POST["model_content"]);
+        storeLine($_POST["model_content"], $conn);
     }
 }
 

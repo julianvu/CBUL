@@ -42,9 +42,7 @@ function register($conn)
 
         }
     }
-
 }
-
 
 /**
  * add user to database
