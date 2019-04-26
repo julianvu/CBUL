@@ -33,10 +33,16 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
             <form method="post" action="upload.php" enctype="multipart/form-data">
                 Choose a model from computer (.txt files only): <input type="file" name="model_to_upload">
                 <br>
+                <br>
                 or Enter data: <input type="text" name="model_content">
+                <br>
                 <br>
                 Model name: <input type="text" name="model_name">
                 <input type="submit">
+                <br>
+                <br>
+                Number of clusters <input type = "number" id = "clusterNumber" min = "1" max = "10">
+                <br>
             </form>
         </body>
         </html>
@@ -55,7 +61,6 @@ function readFileContents($conn)
             return;
         }
 
-        //Read text file
         $name = $_FILES["model_to_upload"]["tmp_name"];
         $fp = fopen($name, 'r');
         $content = fread($fp, filesize($name));
