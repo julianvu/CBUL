@@ -18,7 +18,7 @@ echo <<<_END
 
 
 <div class="d-flex justify-content-center align-content-center">
-      <form action="Register.php" method="post" class="form-sign-up">
+      <form action="register.php" method="post" class="form-sign-up">
         <h2 class="form-signup-heading">SIGN UP PAGE</h2>
         <label for="inputEmail" class="sr-only">Email </label>
         <input type="email" name="inputEmail" id="inputEmail" class="form-control" placeholder="Email address" autofocus>

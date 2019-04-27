@@ -101,7 +101,7 @@ class utilities
 
     }
 
-    
+
 
     /**
      * Get the User ID from username
