@@ -106,7 +106,7 @@ function storeLine($value, $conn)
 
     $arrX = [];
     //for x values
-    if(preg_match_all("/\(\d*?\,/", $value, $xs))
+    if(preg_match_all("/\(\s*\d*?\s*\,/", $value, $xs))
     {
         foreach ($xs as $row)
         {
@@ -118,7 +118,7 @@ function storeLine($value, $conn)
     }
 
     $arrY = [];
-    if(preg_match_all("/\,\d*?\)/", $value, $ys))
+    if(preg_match_all("/\,\s*\d*?\s*\)/", $value, $ys))
     {
         foreach ($ys as $row)
         {
@@ -128,15 +128,17 @@ function storeLine($value, $conn)
             }
         }
     }
+
     $user_id = $_SESSION['id'];
+    $modelName = $_POST['model_name'];
     if(sizeof($arrX) == sizeof($arrY))
     {
         for($i = 0; $i < sizeof($arrX); $i++)
         {
-            $query = "INSERT INTO userDataPlots (x, y, username) VALUES('$arrX[$i]', '$arrY[$i]', '$user_id')";
+            $query = "INSERT INTO userDataPlots (x, y, userId, modelName) VALUES('$arrX[$i]', '$arrY[$i]', '$user_id', '$modelName')";
             $result = $conn->query($query);
             if (!$result) die("insert of file plot failed".$conn->error);
         }
 
-    }else die("Bad Data");
+    }else die("The number of x inputs and y inputs do not match");
 }

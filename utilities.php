@@ -57,7 +57,9 @@ class utilities
         $query = "CREATE TABLE IF NOT EXISTS userDataPlots (
                   x INTEGER NOT NULL,
                   y INTEGER NOT NULL,
-                  userId VARCHAR(64) NOT NULL)";
+                  userId INTEGER NOT NULL,
+                  modelName VARCHAR(64) NOT NULL)
+                  ";
 
         $result2 = $conn->query($query);
         if(!$result2) self::mysql_fatal_error("Can not creat table for user data:", $conn);
