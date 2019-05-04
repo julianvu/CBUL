@@ -31,18 +31,6 @@ class utilities
         echo "<br>";
         mysqli_select_db($conn, $db) or die($conn->error);
 
-//        WE ARE GOING TO REPLACE THIS WITH TABLE
-//
-//        $query = "CREATE TABLE IF NOT EXISTS USERFILE (
-//            id INTEGER NOT NULL,
-//            filename VARCHAR(64) NOT NULL,
-//            content TEXT NOT NULL,
-//            PRIMARY KEY (id, filename)
-//        )";
-//
-//        $result = $conn->query($query);
-//        if (!$result) die ("Database access failed: " . $conn->error);
-
         $query2 = "CREATE TABLE IF NOT EXISTS USER (
             id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, 
             username VARCHAR(64) NOT NULL,
@@ -58,7 +46,7 @@ class utilities
         $query = "CREATE TABLE IF NOT EXISTS userDataPlots (
                   x INTEGER NOT NULL,
                   y INTEGER NOT NULL,
-                  userId VARCHAR(64) NOT NULL)";
+                  userId INTEGER NOT NULL)";
 
         $result2 = $conn->query($query);
         if(!$result2) self::mysql_fatal_error("Can not creat table for user data:", $conn);

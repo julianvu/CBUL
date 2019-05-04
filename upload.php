@@ -105,11 +105,12 @@ function upload($conn) {
 
 function storeLine($value, $conn)
 {
-
     $arrX = [];
+    echo "storeLine <br>";
     //for x values
     if(preg_match_all("/\(\d*?\,/", $value, $xs))
     {
+        echo "storeLine matched regex <br>";
         foreach ($xs as $row)
         {
             for($i = 0; $i < sizeof($row); $i++)
@@ -135,7 +136,7 @@ function storeLine($value, $conn)
     {
         for($i = 0; $i < sizeof($arrX); $i++)
         {
-            $query = "INSERT INTO userDataPlots (x, y, username) VALUES('$arrX[$i]', '$arrY[$i]', '$user_id')";
+            $query = "INSERT INTO userDataPlots (x, y, userId) VALUES('$arrX[$i]', '$arrY[$i]', '$user_id')";
             $result = $conn->query($query);
             if (!$result) die("insert of file plot failed".$conn->error);
         }
