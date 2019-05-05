@@ -9,6 +9,7 @@
 require_once "login.php";
 require_once 'utilities.php';
 require "coordinate.php";
+require "centroid.php";
 
 define("USER_DATA_PLOTS_COL_NUM", 4);
 session_start();
@@ -62,10 +63,32 @@ _END;
 function k_means($conn)
 {
     $coordinates = [];
-    extract_data($coordinates, $conn);
     $centroids = [];
+    
+    extract_data($coordinates, $conn);
     initialize_k_means($centroids);
+    calculate_nearest_centroids($centroids, $coordinates);
+    relocate_by_classification($coordinates, $centroids);
+}
 
+function relocate_by_classification(&$coordinates, &$centroids)
+{
+    foreach($coordinates as $coordinate)
+    {
+        //This is the centroid
+        $centroid_object = $coordinate->get_nearest_centroid_coordinate();
+        $centroid_object->new_classified($coordinate);
+    }
+    foreach($centroids as $centroid)
+    {
+        echo "Before " . $centroid->pretty_printing();
+        $centroid->relocate_centroid();
+        echo "After " . $centroid->pretty_printing();
+    }
+}
+
+function calculate_nearest_centroids(&$centroids, &$coordinates)
+{
     //Set closest centroid for every coordinate
     foreach($coordinates as $coordinate)
     {
@@ -81,14 +104,14 @@ function k_means($conn)
                 $closest_centroid = $centroid;
             }
         }
-        $coordinate-> set_nearest_centroid_coordinate($closest_centroid);
+        $coordinate->set_nearest_centroid_coordinate($closest_centroid);
     }
 }
 
 function get_euclidean_distance($coordinate1, $coordinate2)
 {
-    $x_diff_pow =math.pow($coordinate1->get_x() - $coordinate2->get_x(), 2);
-    $y_diff_pow =math.pow($coordinate1->get_y() - $coordinate2->get_y(), 2);
+    $x_diff_pow = pow($coordinate1->get_x() - $coordinate2->get_x(), 2);
+    $y_diff_pow = pow($coordinate1->get_y() - $coordinate2->get_y(), 2);
     return sqrt($x_diff_pow + $y_diff_pow);
 }
 
@@ -120,7 +143,6 @@ function initialize_k_means(&$centroid)
     {
         $randX = mt_rand(0, 500);
         $randY = mt_rand(0, 500);
-        $coordinate = new coordinate($randX, $randY);
-        array_push($centroid, $coordinate);
-    }
+        $centroid_object = new centroid($randX, $randY);
+        array_push($centroid, $centroid_object);}
 }

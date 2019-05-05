@@ -29,6 +29,12 @@ class coordinate
         $this->nearest_centroid_coordinate = $new_nearest_centroid_coordinate;
     }
 
+    public function set_coordinate($x, $y)
+    {
+        $this->x = $x;
+        $this->y = $y;
+    }
+
     public function get_x()
     {
         return $this->x;
@@ -37,5 +43,10 @@ class coordinate
     public function get_y()
     {
         return $this->y;
+    }
+
+    public function pretty_printing()
+    {
+        return "Plot X: " . $this->x . " Plot Y: " . $this->y. "<br>";
     }
 }
