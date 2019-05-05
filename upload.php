@@ -7,6 +7,8 @@
  */
 require_once "login.php";
 require_once 'utilities.php';
+require 'coordinate.php';
+
 session_start();
 $user_id = '';
 if (isset($_SESSION['id'])) {
@@ -38,12 +40,15 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
                 <br>
                 <br>
                 Model name: <input type="text" name="model_name">
-                <input type="submit">
+                <input type="submit" value="Enter">
                 <br>
-                <br>
-                Number of clusters <input type = "number" id = "clusterNumber" min = "1" max = "10">
                 <br>
             </form>
+            
+            <form method="post" action="train.php">
+                <input type="submit" value="Go To Train">
+            </form>
+            
         </body>
         </html>
 _END;
@@ -51,6 +56,7 @@ _END;
 }else{
     echo "You are not allowed to access this page without authentication";
 }
+
 function readFileContents($conn)
 {
     if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"])) {
@@ -73,7 +79,7 @@ function readFileContents($conn)
         }
     }
 
-    if(isset($_POST["model_content"]))
+    if(isset($_POST["model_content"]) !== "")
     {
         utilities::sanitizeMySQL($conn, $_POST["model_content"]);
         storeLine($_POST["model_content"], $conn);
@@ -103,8 +109,32 @@ function upload($conn) {
 
 function storeLine($value, $conn)
 {
-
+    $arr_coordinates = [];
     $arrX = [];
+    $arrY = [];
+    create_coordinate_list($value, $arrX, $arrY);
+
+    if (sizeof($arrX) == sizeof($arrY)) {
+        for($i = 0; $i < sizeof($arrX); $i++)
+        {
+            $coordinate = new coordinate($arrX[$i], $arrY[$i]);
+            array_push($arr_coordinates, $coordinate);
+        }
+    } else die("The number of x inputs and y inputs do not match");
+
+    $user_id = $_SESSION['id'];
+    $modelName = $_POST['model_name'];
+    for ($i = 0; $i < sizeof($arrX); $i++) {
+        $x_value = $arr_coordinates[$i]->get_x();
+        $y_value = $arr_coordinates[$i]->get_y();
+        $query = "INSERT INTO userDataPlots (x, y, userId, modelName) VALUES('$x_value', '$y_value', '$user_id', '$modelName')";
+        $result = $conn->query($query);
+        if (!$result) die("insert of file plot failed" . $conn->error);
+    }
+}
+
+function create_coordinate_list($value, &$arrX, &$arrY)
+{
     //for x values
     if(preg_match_all("/\(\s*\d*?\s*\,/", $value, $xs))
     {
@@ -116,8 +146,6 @@ function storeLine($value, $conn)
             }
         }
     }
-
-    $arrY = [];
     if(preg_match_all("/\,\s*\d*?\s*\)/", $value, $ys))
     {
         foreach ($ys as $row)
@@ -128,17 +156,4 @@ function storeLine($value, $conn)
             }
         }
     }
-
-    $user_id = $_SESSION['id'];
-    $modelName = $_POST['model_name'];
-    if(sizeof($arrX) == sizeof($arrY))
-    {
-        for($i = 0; $i < sizeof($arrX); $i++)
-        {
-            $query = "INSERT INTO userDataPlots (x, y, userId, modelName) VALUES('$arrX[$i]', '$arrY[$i]', '$user_id', '$modelName')";
-            $result = $conn->query($query);
-            if (!$result) die("insert of file plot failed".$conn->error);
-        }
-
-    }else die("The number of x inputs and y inputs do not match");
 }
