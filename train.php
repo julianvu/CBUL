@@ -12,6 +12,7 @@ require "coordinate.php";
 require "centroid.php";
 
 define("USER_DATA_PLOTS_COL_NUM", 4);
+define("K_MEANS_ITERATIONS", 50);
 session_start();
 $user_id = '';
 if (isset($_SESSION['id'])) {
@@ -64,11 +65,18 @@ function k_means($conn)
 {
     $coordinates = [];
     $centroids = [];
-    
+    $convergence_accepted = false;
+    $iteration = 0;
     extract_data($coordinates, $conn);
     initialize_k_means($centroids);
-    calculate_nearest_centroids($centroids, $coordinates);
-    relocate_by_classification($coordinates, $centroids);
+    foreach ($centroids as $centroid)echo "Before " . $centroid->pretty_printing();
+    while($iteration < K_MEANS_ITERATIONS)
+    {
+        calculate_nearest_centroids($centroids, $coordinates);
+        relocate_by_classification($coordinates, $centroids);
+        $iteration++;
+    }
+    foreach ($centroids as $centroid)echo "After " . $centroid->pretty_printing();
 }
 
 function relocate_by_classification(&$coordinates, &$centroids)
@@ -81,9 +89,7 @@ function relocate_by_classification(&$coordinates, &$centroids)
     }
     foreach($centroids as $centroid)
     {
-        echo "Before " . $centroid->pretty_printing();
         $centroid->relocate_centroid();
-        echo "After " . $centroid->pretty_printing();
     }
 }
 
