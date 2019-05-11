@@ -7,10 +7,16 @@
  */
 require_once "login.php";
 require_once 'utilities.php';
-require 'coordinate.php';
+require_once 'coordinate.php';
 
 session_start();
 $user_id = '';
+
+$errorMessage = '';
+if (isset($_SESSION['err_mess'])) {
+    $errorMessage = $_SESSION['err_mess'];
+    unset($_SESSION['err_mess']);
+}
 if (isset($_SESSION['id'])) {
     $user_id = $_SESSION['id'];
 
@@ -41,6 +47,7 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
                 <br>
                 Model name: <input type="text" name="model_name">
                 <input type="submit" value="Enter">
+                 <h4 class="form-signin-heading">$errorMessage</h4>
                 <br>
                 <br>
             </form>
@@ -54,16 +61,17 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
 _END;
     $conn->close();
 }else{
-    echo "You are not allowed to access this page without authentication";
+    utilities::mysql_fatal_error("You are not allowed to access this page without authentication", $conn);
 }
 
-function readFileContents($conn)
+function readFileContents($conn, $model_name)
 {
     if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"])) {
         $temp_file = $_FILES["model_to_upload"]["name"];
         $uploaded_model_ext = pathinfo($temp_file, PATHINFO_EXTENSION);
-        if ($uploaded_model_ext !== "txt") {
-            echo "File type error - File not TXT";
+
+        if ($_FILES['model_to_upload']['type'] !== "text/plain") {
+            utilities::mysql_fatal_error("Not a text file", $conn);
             return;
         }
 
@@ -74,15 +82,9 @@ function readFileContents($conn)
         fclose($fp);
         foreach ($lines as $line)
         {
-            utilities::sanitizeMySQL($conn, $line);
-            storeLine($line, $conn);
+            $sanitized_line = utilities::sanitizeMySQL($conn, $line);
+            storeLine($sanitized_line, $conn, $model_name);
         }
-    }
-
-    if(isset($_POST["model_content"]) !== "")
-    {
-        utilities::sanitizeMySQL($conn, $_POST["model_content"]);
-        storeLine($_POST["model_content"], $conn);
     }
 }
 
@@ -95,24 +97,27 @@ function readFileContents($conn)
  * @param $conn     MySQL connection
  */
 function upload($conn) {
+    $model_name = "";
     if (isset($_POST["model_name"])) {
         $model_name = utilities::sanitizeMySQL($conn, $_POST["model_name"]);
+    }
 
-        readFileContents($conn);
+    if (isset($_POST["model_content"]) && $model_name != "") {
+        $model_content = utilities::sanitizeMySQL($conn, $_POST["model_content"]);
+        storeLine($model_content, $conn, $model_name);
+    }
 
-        $model_content = "";
-        if (isset($_POST["model_content"]) && $_POST["model_content"] !== "") {
-            $model_content = utilities::sanitizeMySQL($conn, $_POST["model_content"]);
-        }
+    if(isset($_POST['model_name']))
+    {
+        readFileContents($conn, $model_name);
     }
 }
 
-function storeLine($value, $conn)
+function storeLine($value, $conn, $modelName)
 {
     $arr_coordinates = [];
-    $arrX = [];
-    $arrY = [];
-    create_coordinate_list($value, $arrX, $arrY);
+    $arrX = utilities::create_coordinate_x($value);
+    $arrY = utilities::create_coordinate_Y($value);
 
     if (sizeof($arrX) == sizeof($arrY)) {
         for($i = 0; $i < sizeof($arrX); $i++)
@@ -123,7 +128,6 @@ function storeLine($value, $conn)
     } else die("The number of x inputs and y inputs do not match");
 
     $user_id = $_SESSION['id'];
-    $modelName = $_POST['model_name'];
     for ($i = 0; $i < sizeof($arrX); $i++) {
         $x_value = $arr_coordinates[$i]->get_x();
         $y_value = $arr_coordinates[$i]->get_y();

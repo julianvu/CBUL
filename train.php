@@ -8,8 +8,8 @@
 
 require_once "login.php";
 require_once 'utilities.php';
-require "coordinate.php";
-require "centroid.php";
+require_once "coordinate.php";
+require_once "centroid.php";
 
 define("USER_DATA_PLOTS_COL_NUM", 4);
 define("K_MEANS_ITERATIONS", 50);
@@ -31,7 +31,8 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
 
     if(isset($_POST['model_name_choice']) && isset($_POST['cluster_number']))
     {
-        k_means($conn);
+        $k = $_POST['cluster_number'];
+        k_means($conn, $user_id, $k);
     }
 
     echo <<< _END
@@ -49,7 +50,11 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
             Clusters built from which model <input type = "text" name = "model_name_choice">
             <br>
             <br>
-            <input type="submit" value="Go To Test">
+            <input type="submit" value="Calculate Cluster Centroids">
+        </form>
+        <form method="post" action="test.php">
+        <h1>Test some data</h1>
+            <input type="submit" value="Test Data">
         </form>
         </body> 
         </html>
@@ -61,14 +66,11 @@ _END;
 }
 
 
-function k_means($conn)
+function k_means($conn, $user_id, $clusterNumber)
 {
-    $coordinates = [];
-    $centroids = [];
-    $convergence_accepted = false;
     $iteration = 0;
-    extract_data($coordinates, $conn);
-    initialize_k_means($centroids);
+    $coordinates = extract_data($conn);
+    $centroids = initialize_k_means();
     foreach ($centroids as $centroid)echo "Before " . $centroid->pretty_printing();
     while($iteration < K_MEANS_ITERATIONS)
     {
@@ -76,7 +78,19 @@ function k_means($conn)
         relocate_by_classification($coordinates, $centroids);
         $iteration++;
     }
-    foreach ($centroids as $centroid)echo "After " . $centroid->pretty_printing();
+    $model_name = $_POST['model_name_choice'];
+    foreach ($centroids as $centroid)
+    {
+        echo "After " . $centroid->pretty_printing();
+        $centroidX = $centroid->get_X();
+        $centroidY = $centroid->get_Y();
+        $query = "DELETE FROM centroids WHERE userId = '$user_id' AND modelName = '$model_name' AND k = '$clusterNumber'";
+        $result = $conn->query($query);
+        if(!$result) utilities::mysql_fatal_error("Can not delete previous centroids", $conn);
+        $query = "INSERT INTO centroids (userId, modelName, k, centroidX, centroidY) VALUES ('$user_id', '$model_name', '$clusterNumber' '$centroidX', '$centroidY')";
+        $result = $conn->query($query);
+        if(!$result) utilities::mysql_fatal_error("Can not insert centroids", $conn);
+    }
 }
 
 function relocate_by_classification(&$coordinates, &$centroids)
@@ -103,7 +117,7 @@ function calculate_nearest_centroids(&$centroids, &$coordinates)
         $closest_centroid = null;
         foreach($centroids as $centroid)
         {
-            $distance_from_centroid = get_euclidean_distance($coordinate, $centroid);
+            $distance_from_centroid = utilities::get_euclidean_distance($coordinate, $centroid);
             if($distance_from_centroid < $min_distance)
             {
                 $min_distance = $distance_from_centroid;
@@ -114,14 +128,7 @@ function calculate_nearest_centroids(&$centroids, &$coordinates)
     }
 }
 
-function get_euclidean_distance($coordinate1, $coordinate2)
-{
-    $x_diff_pow = pow($coordinate1->get_x() - $coordinate2->get_x(), 2);
-    $y_diff_pow = pow($coordinate1->get_y() - $coordinate2->get_y(), 2);
-    return sqrt($x_diff_pow + $y_diff_pow);
-}
-
-function extract_data(&$coordinates, $conn)
+function extract_data($conn)
 {
 
     $model_name_choice = utilities::sanitizeMySQL($conn, $_POST["model_name_choice"]);
@@ -133,6 +140,7 @@ function extract_data(&$coordinates, $conn)
     $result = $conn->query($query);
     if(!$result)die("Database access for user plots");
 
+    $coordinates = [];
     $rows = $result->num_rows;
     for($j = 0; $j < $rows; ++$j)
     {
@@ -141,14 +149,19 @@ function extract_data(&$coordinates, $conn)
         $coordinate = new coordinate($row[0], $row[1]);
         array_push($coordinates, $coordinate);
     }
+    $result->close();
+    return $coordinates;
 }
 
-function initialize_k_means(&$centroid)
+function initialize_k_means()
 {
+    $centroids = [];
     for($i = 0; $i < $_POST["cluster_number"]; $i++)
     {
         $randX = mt_rand(0, 500);
         $randY = mt_rand(0, 500);
         $centroid_object = new centroid($randX, $randY);
-        array_push($centroid, $centroid_object);}
+        array_push($centroids, $centroid_object);
+    }
+    return $centroids;
 }

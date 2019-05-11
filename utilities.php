@@ -28,18 +28,6 @@ class utilities
         echo "<br>";
         mysqli_select_db($conn, $db) or die($conn->error);
 
-//        WE ARE GOING TO REPLACE THIS WITH TABLE
-//
-//        $query = "CREATE TABLE IF NOT EXISTS USERFILE (
-//            id INTEGER NOT NULL,
-//            filename VARCHAR(64) NOT NULL,
-//            content TEXT NOT NULL,
-//            PRIMARY KEY (id, filename)
-//        )";
-//
-//        $result = $conn->query($query);
-//        if (!$result) die ("Database access failed: " . $conn->error);
-
         $query2 = "CREATE TABLE IF NOT EXISTS USER (
             id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, 
             username VARCHAR(64) NOT NULL,
@@ -63,6 +51,18 @@ class utilities
 
         $result2 = $conn->query($query);
         if(!$result2) self::mysql_fatal_error("Can not creat table for user data:", $conn);
+
+        $query = "CREATE TABLE IF NOT EXISTS centroids (
+                  userId INTEGER  NOT NULL,
+                  modelName VARCHAR(64) NOT NULL,
+                  k INTEGER  NOT NULL,
+                  centroidX INTEGER NOT NULL,
+                  centroidY INTEGER NOT NULL 
+        )";
+
+        $result2  = $conn->query($query);
+        if(!$result2) self::mysql_fatal_error("Can not creat table for centroid:", $conn);
+
         return $conn;
     }
 
@@ -92,9 +92,9 @@ class utilities
      * @param $string   String to sanitize
      * @return mixed    Sanitized string
      */
-    public static function sanitizeMySQL($connection, $var)
+    public static function sanitizeMySQL($conn, $var)
     {
-        $var = $connection->real_escape_string($var);
+        $var = $conn->real_escape_string($var);
         $var = utilities::sanitizeString($var);
         return $var;
     }
@@ -110,8 +110,6 @@ class utilities
         return hash('ripemd128', $salt1.$string.$salt2);
 
     }
-
-
 
     /**
      * Get the User ID from username
@@ -152,4 +150,45 @@ _END;
         if(get_magic_quotes_gpc()) $string = stripcslashes($string);
         return $connection->real_escape_string($string);
     }
+
+    public static function create_coordinate_x($value)
+    {
+        $arrX = [];
+        //for x values
+        if(preg_match_all("/\(\s*\d*?\s*\,/", $value, $xs))
+        {
+            foreach ($xs as $row)
+            {
+                for($i = 0; $i < sizeof($row); $i++)
+                {
+                    array_push($arrX, substr($row[$i], 1, -1));
+                }
+            }
+        }
+        return $arrX;
+    }
+
+    public static function create_coordinate_Y($value)
+    {
+        $arrY = [];
+        if(preg_match_all("/\,\s*\d*?\s*\)/", $value, $ys))
+        {
+            foreach ($ys as $row)
+            {
+                for($i = 0; $i < sizeof($row); $i++)
+                {
+                    array_push($arrY, substr($row[$i], 1, -1));
+                }
+            }
+        }
+        return $arrY;
+    }
+
+    public static function get_euclidean_distance($coordinate1, $coordinate2)
+    {
+        $x_diff_pow = pow($coordinate1->get_x() - $coordinate2->get_x(), 2);
+        $y_diff_pow = pow($coordinate1->get_y() - $coordinate2->get_y(), 2);
+        return sqrt($x_diff_pow + $y_diff_pow);
+    }
+
 }
