@@ -78,16 +78,17 @@ function k_means($conn, $user_id, $clusterNumber)
         relocate_by_classification($coordinates, $centroids);
         $iteration++;
     }
+
     $model_name = $_POST['model_name_choice'];
+    $query = "DELETE FROM centroids WHERE userId = '$user_id' AND modelName = '$model_name' AND k = '$clusterNumber'";
+    $result = $conn->query($query);
+    if(!$result) utilities::mysql_fatal_error("Can not delete previous centroids", $conn);
     foreach ($centroids as $centroid)
     {
         echo "After " . $centroid->pretty_printing();
         $centroidX = $centroid->get_X();
         $centroidY = $centroid->get_Y();
-        $query = "DELETE FROM centroids WHERE userId = '$user_id' AND modelName = '$model_name' AND k = '$clusterNumber'";
-        $result = $conn->query($query);
-        if(!$result) utilities::mysql_fatal_error("Can not delete previous centroids", $conn);
-        $query = "INSERT INTO centroids (userId, modelName, k, centroidX, centroidY) VALUES ('$user_id', '$model_name', '$clusterNumber' '$centroidX', '$centroidY')";
+        $query = "INSERT INTO centroids (userId, modelName, k, centroidX, centroidY) VALUES ('$user_id', '$model_name', '$clusterNumber','$centroidX', '$centroidY')";
         $result = $conn->query($query);
         if(!$result) utilities::mysql_fatal_error("Can not insert centroids", $conn);
     }
