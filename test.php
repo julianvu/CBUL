@@ -25,10 +25,13 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
         $_SERVER['HTTP_USER_AGENT'])) {
     $conn = utilities::databaseCreation($hn, $un, $pw, $db);
 
-    if(isset($_POST['model_name']))
+    if(isset($_POST['model_name']) && isset($_POST["test_coordinate"]))
     {
-        $nearest_cluster = calculateNearestCentroid($conn, $user_id);
-        echo "Nearest cluster centroid is is where X: " . $nearest_cluster->get_X() . " Y: " . $nearest_cluster->get_Y();
+        $model_name = utilities::sanitizeMySQL($conn, $_POST['model_name']);
+        $input_coordinate = $_POST["test_coordinate"];
+        $test_coordinate = utilities::sanitizeMySQL($conn, $input_coordinate);
+        $nearest_cluster = calculateNearestCentroid($conn, $user_id, $model_name, $test_coordinate);
+        if($nearest_cluster != null) echo "Nearest cluster centroid is where X: " . $nearest_cluster->get_X() . " Y: " . $nearest_cluster->get_Y();
     }
 
     echo <<< _END
@@ -54,15 +57,17 @@ _END;
     echo "You are not allowed to access this page without authentication";
 }
 
-function calculateNearestCentroid($conn, $userId)
+function calculateNearestCentroid($conn, $userId, $model_name_choice, $test_coordinate)
 {
-    $coordinate = extractUserTestData($conn);
-    $model_name_choice = $_POST['model_name'];
+    $coordinate = extractUserTestData($conn, $test_coordinate);
     $query = "SELECT * FROM centroids WHERE userId = '$userId' AND modelName = '$model_name_choice'";
     $result = $conn->query($query);
     $rows = $result->num_rows;
-    $centroids_coordinates = [];
-
+    if($rows == 0)
+    {
+        utilities::mysql_fatal_error("No data found on these specifications", $conn);
+        return null;
+    }
     $minDistance = PHP_INT_MAX;
     $nearest_cluster = null;
     for($j = 0; $j < $rows; ++$j)
@@ -77,22 +82,21 @@ function calculateNearestCentroid($conn, $userId)
             $minDistance = $distance;
         }
     }
-
-    if($nearest_cluster == null) utilities::mysql_fatal_error("No closest clusters check data", $conn);
     $result->close();
+    if($nearest_cluster == null) utilities::mysql_fatal_error("No closest clusters check data", $conn);
     return $nearest_cluster;
 }
 
-function extractUserTestData($conn)
+function extractUserTestData($conn, $test_coordinate)
 {
-    if(isset($_POST["test_coordinate"]))
+    $x = [];
+    $y = [];
+    if(!preg_match("/\(\s*\d*?\s*\,/", $test_coordinate, $x)) {
+        utilities::mysql_fatal_error("Can not find x values", $conn);
+    }
+    if(!preg_match("/\,\s*\d*?\s*\)/", $test_coordinate, $y))
     {
-        $input_coordinate = $_POST["test_coordinate"];
-        $sanitized = utilities::sanitizeMySQL($conn, $input_coordinate);
-        preg_match("/\(\s*\d*?\s*\,/", $sanitized, $x);
-        preg_match("/\,\s*\d*?\s*\)/", $sanitized, $y);
-    }else{
-        utilities::mysql_fatal_error("Input is incorrect", $conn);
+        utilities::mysql_fatal_error("Can not find y values", $conn);
     }
     $x_coordinate = substr($x[0], 1, -1);
     $y_coordinate = substr($y[0], 1, -1);

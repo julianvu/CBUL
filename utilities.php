@@ -3,7 +3,6 @@
  * Created by Anis Dhapa
  */
 
-
 class utilities
 {
 
@@ -140,8 +139,7 @@ class utilities
         $msg2 = mysqli_error($conn);
         echo <<<_END
 We are not able to complete the requested task. The error message was: 
-<p> $msg: $msg2 </p> 
-Please clock the back button on your browser and try again. 
+<p> $msg: $msg2 </p>
 _END;
     }
 

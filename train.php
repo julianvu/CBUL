@@ -31,7 +31,8 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
 
     if(isset($_POST['model_name_choice']) && isset($_POST['cluster_number']))
     {
-        $k = $_POST['cluster_number'];
+        $k = utilities::sanitizeMySQL($conn, $_POST['cluster_number']);
+
         k_means($conn, $user_id, $k);
     }
 
@@ -68,9 +69,11 @@ _END;
 
 function k_means($conn, $user_id, $clusterNumber)
 {
+    $model_name = utilities::sanitizeMySQL($conn, $_POST['model_name_choice']);
+
     $iteration = 0;
-    $coordinates = extract_data($conn);
-    $centroids = initialize_k_means();
+    $coordinates = extract_data($conn, $clusterNumber, $model_name);
+    $centroids = initialize_k_means($clusterNumber);
     foreach ($centroids as $centroid)echo "Before " . $centroid->pretty_printing();
     while($iteration < K_MEANS_ITERATIONS)
     {
@@ -79,7 +82,6 @@ function k_means($conn, $user_id, $clusterNumber)
         $iteration++;
     }
 
-    $model_name = $_POST['model_name_choice'];
     $query = "DELETE FROM centroids WHERE userId = '$user_id' AND modelName = '$model_name' AND k = '$clusterNumber'";
     $result = $conn->query($query);
     if(!$result) utilities::mysql_fatal_error("Can not delete previous centroids", $conn);
@@ -92,6 +94,7 @@ function k_means($conn, $user_id, $clusterNumber)
         $result = $conn->query($query);
         if(!$result) utilities::mysql_fatal_error("Can not insert centroids", $conn);
     }
+    $result->close();
 }
 
 function relocate_by_classification(&$coordinates, &$centroids)
@@ -129,11 +132,8 @@ function calculate_nearest_centroids(&$centroids, &$coordinates)
     }
 }
 
-function extract_data($conn)
+function extract_data($conn, $cluster_number, $model_name_choice)
 {
-
-    $model_name_choice = utilities::sanitizeMySQL($conn, $_POST["model_name_choice"]);
-    $cluster_number = $_POST["cluster_number"];
     if(!is_int($cluster_number) && $cluster_number > 10)die("Cluster size is invalid");
 
     $userId = $_SESSION['id'];
@@ -154,10 +154,10 @@ function extract_data($conn)
     return $coordinates;
 }
 
-function initialize_k_means()
+function initialize_k_means($k)
 {
     $centroids = [];
-    for($i = 0; $i < $_POST["cluster_number"]; $i++)
+    for($i = 0; $i < $k; $i++)
     {
         $randX = mt_rand(0, 500);
         $randY = mt_rand(0, 500);

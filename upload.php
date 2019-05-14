@@ -66,9 +66,8 @@ _END;
 
 function readFileContents($conn, $model_name)
 {
-    if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"])) {
+    if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"]) && file_exists($_FILES["model_to_upload"]["tmp_name"])) {
         $temp_file = $_FILES["model_to_upload"]["name"];
-        $uploaded_model_ext = pathinfo($temp_file, PATHINFO_EXTENSION);
 
         if ($_FILES['model_to_upload']['type'] !== "text/plain") {
             utilities::mysql_fatal_error("Not a text file", $conn);
@@ -134,6 +133,7 @@ function storeLine($value, $conn, $modelName)
         $query = "INSERT INTO userDataPlots (x, y, userId, modelName) VALUES('$x_value', '$y_value', '$user_id', '$modelName')";
         $result = $conn->query($query);
         if (!$result) die("insert of file plot failed" . $conn->error);
+        $result->close();
     }
 }
 

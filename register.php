@@ -60,11 +60,12 @@ function addUser($username,$email, $password, $conn)
     $hashPassword = utilities::hashPassword($password, $salt, $saltier);
     $query = "INSERT INTO USER (username,email,password, salty, saltier) VALUES('$username','$email','$hashPassword', '$salt', '$saltier')";
     $result = $conn->query($query);
-    if (!$result) die("insert failed".$conn->error);
-
+    if (!$result) utilities::mysql_fatal_error($conn, "Can not add a user");
+    $result->close();
 }
 
 
 $conn = utilities::databaseCreation($hn,$un,$pw,$db);
 register($conn);
+$conn->close();
 
