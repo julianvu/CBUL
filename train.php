@@ -73,6 +73,10 @@ function k_means($conn, $user_id, $clusterNumber)
 
     $iteration = 0;
     $coordinates = extract_data($conn, $clusterNumber, $model_name);
+    if($coordinates == null)
+    {
+        return;
+    }
     $centroids = initialize_k_means($clusterNumber);
     foreach ($centroids as $centroid)echo "Before " . $centroid->pretty_printing();
     while($iteration < K_MEANS_ITERATIONS)
@@ -139,10 +143,15 @@ function extract_data($conn, $cluster_number, $model_name_choice)
     $userId = $_SESSION['id'];
     $query = "SELECT * FROM userDataPlots WHERE userId = '$userId' AND modelName = '$model_name_choice'";
     $result = $conn->query($query);
+    $rows = $result->num_rows;
+    if($rows == 0)
+    {
+        utilities::mysql_fatal_error("No data found on these specifications", $conn);
+        return null;
+    }
     if(!$result)die("Database access for user plots");
 
     $coordinates = [];
-    $rows = $result->num_rows;
     for($j = 0; $j < $rows; ++$j)
     {
         $result->data_seek($j);

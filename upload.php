@@ -27,9 +27,9 @@ if (!isset($_SESSION['initiated']))
     $_SESSION['initiated'] = 1;
 }
 
+$conn = utilities::databaseCreation($hn, $un, $pw, $db);
 if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_ADDR'] .
         $_SERVER['HTTP_USER_AGENT'])) {
-    $conn = utilities::databaseCreation($hn, $un, $pw, $db);
     upload($conn);
 
     echo <<< _END
@@ -59,10 +59,10 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
         </body>
         </html>
 _END;
-    $conn->close();
 }else{
     utilities::mysql_fatal_error("You are not allowed to access this page without authentication", $conn);
 }
+$conn->close();
 
 function readFileContents($conn, $model_name)
 {
