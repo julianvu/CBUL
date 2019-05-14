@@ -17,12 +17,11 @@ if (isset($_SESSION['err_mess'])) {
 }
 
 
-
 echo <<<_END
 
 
-<div class="d-flex justify-content-center align-content-center">
-      <form action="authentication.php" method="post" class="form-signin" >
+<div class="d-flex justify-content-center align-content-center" >
+      <form action="authentication.php" method="post" class="form-signin"  >
         <h2 class="form-signin-heading">Sign In Page</h2>
         <label for="inputUsername" class="sr-only">Username</label>
         <input type="text" name="inputUsername" id="inputUsername" class="form-control" placeholder="Username" autofocus>
@@ -34,7 +33,7 @@ _END;
 echo <<<_END
         <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
         
-        <h4 class="form-signin-heading">$errorMessage</h4>
+        <h4 class="form-signin-heading" id="errorMessage">$errorMessage</h4>
       </form>
       
       <form method="post" action="sign-up.php">
@@ -42,4 +41,5 @@ echo <<<_END
 	    </form>
 
 </div>
+
 _END;
