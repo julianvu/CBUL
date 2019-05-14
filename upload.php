@@ -7,8 +7,16 @@
  */
 require_once "login.php";
 require_once 'utilities.php';
+require_once 'coordinate.php';
+
 session_start();
 $user_id = '';
+
+$errorMessage = '';
+if (isset($_SESSION['err_mess'])) {
+    $errorMessage = $_SESSION['err_mess'];
+    unset($_SESSION['err_mess']);
+}
 if (isset($_SESSION['id'])) {
     $user_id = $_SESSION['id'];
 
@@ -19,9 +27,9 @@ if (!isset($_SESSION['initiated']))
     $_SESSION['initiated'] = 1;
 }
 
+$conn = utilities::databaseCreation($hn, $un, $pw, $db);
 if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_ADDR'] .
         $_SERVER['HTTP_USER_AGENT'])) {
-    $conn = utilities::databaseCreation($hn, $un, $pw, $db);
     upload($conn);
 
     echo <<< _END
@@ -38,26 +46,31 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
                 <br>
                 <br>
                 Model name: <input type="text" name="model_name">
-                <input type="submit">
+                <input type="submit" value="Enter">
+                 <h4 class="form-signin-heading">$errorMessage</h4>
                 <br>
-                <br>
-                Number of clusters <input type = "number" id = "clusterNumber" min = "1" max = "10">
                 <br>
             </form>
+            
+            <form method="post" action="train.php">
+                <input type="submit" value="Go To Train">
+            </form>
+            
         </body>
         </html>
 _END;
-    $conn->close();
 }else{
-    echo "You are not allowed to access this page without authentication";
+    utilities::mysql_fatal_error("You are not allowed to access this page without authentication", $conn);
 }
-function readFileContents($conn)
+$conn->close();
+
+function readFileContents($conn, $model_name)
 {
-    if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"])) {
+    if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"]) && file_exists($_FILES["model_to_upload"]["tmp_name"])) {
         $temp_file = $_FILES["model_to_upload"]["name"];
-        $uploaded_model_ext = pathinfo($temp_file, PATHINFO_EXTENSION);
-        if ($uploaded_model_ext !== "txt") {
-            echo "File type error - File not TXT";
+
+        if ($_FILES['model_to_upload']['type'] !== "text/plain") {
+            utilities::mysql_fatal_error("Not a text file", $conn);
             return;
         }
 
@@ -68,15 +81,9 @@ function readFileContents($conn)
         fclose($fp);
         foreach ($lines as $line)
         {
-            utilities::sanitizeMySQL($conn, $line);
-            storeLine($line, $conn);
+            $sanitized_line = utilities::sanitizeMySQL($conn, $line);
+            storeLine($sanitized_line, $conn, $model_name);
         }
-    }
-
-    if(isset($_POST["model_content"]))
-    {
-        utilities::sanitizeMySQL($conn, $_POST["model_content"]);
-        storeLine($_POST["model_content"], $conn);
     }
 }
 
@@ -89,22 +96,49 @@ function readFileContents($conn)
  * @param $conn     MySQL connection
  */
 function upload($conn) {
+    $model_name = "";
     if (isset($_POST["model_name"])) {
         $model_name = utilities::sanitizeMySQL($conn, $_POST["model_name"]);
+    }
 
-        readFileContents($conn);
+    if (isset($_POST["model_content"]) && $model_name != "") {
+        $model_content = utilities::sanitizeMySQL($conn, $_POST["model_content"]);
+        storeLine($model_content, $conn, $model_name);
+    }
 
-        $model_content = "";
-        if (isset($_POST["model_content"]) && $_POST["model_content"] !== "") {
-            $model_content = utilities::sanitizeMySQL($conn, $_POST["model_content"]);
-        }
+    if(isset($_POST['model_name']))
+    {
+        readFileContents($conn, $model_name);
     }
 }
 
-function storeLine($value, $conn)
+function storeLine($value, $conn, $modelName)
 {
+    $arr_coordinates = [];
+    $arrX = utilities::create_coordinate_x($value);
+    $arrY = utilities::create_coordinate_Y($value);
 
-    $arrX = [];
+    if (sizeof($arrX) == sizeof($arrY)) {
+        for($i = 0; $i < sizeof($arrX); $i++)
+        {
+            $coordinate = new coordinate($arrX[$i], $arrY[$i]);
+            array_push($arr_coordinates, $coordinate);
+        }
+    } else die("The number of x inputs and y inputs do not match");
+
+    $user_id = $_SESSION['id'];
+    for ($i = 0; $i < sizeof($arrX); $i++) {
+        $x_value = $arr_coordinates[$i]->get_x();
+        $y_value = $arr_coordinates[$i]->get_y();
+        $query = "INSERT INTO userDataPlots (x, y, userId, modelName) VALUES('$x_value', '$y_value', '$user_id', '$modelName')";
+        $result = $conn->query($query);
+        if (!$result) die("insert of file plot failed" . $conn->error);
+        $result->close();
+    }
+}
+
+function create_coordinate_list($value, &$arrX, &$arrY)
+{
     //for x values
     if(preg_match_all("/\(\s*\d*?\s*\,/", $value, $xs))
     {
@@ -116,8 +150,6 @@ function storeLine($value, $conn)
             }
         }
     }
-
-    $arrY = [];
     if(preg_match_all("/\,\s*\d*?\s*\)/", $value, $ys))
     {
         foreach ($ys as $row)
@@ -128,17 +160,4 @@ function storeLine($value, $conn)
             }
         }
     }
-
-    $user_id = $_SESSION['id'];
-    $modelName = $_POST['model_name'];
-    if(sizeof($arrX) == sizeof($arrY))
-    {
-        for($i = 0; $i < sizeof($arrX); $i++)
-        {
-            $query = "INSERT INTO userDataPlots (x, y, userId, modelName) VALUES('$arrX[$i]', '$arrY[$i]', '$user_id', '$modelName')";
-            $result = $conn->query($query);
-            if (!$result) die("insert of file plot failed".$conn->error);
-        }
-
-    }else die("The number of x inputs and y inputs do not match");
 }
