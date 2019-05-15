@@ -26,7 +26,6 @@ if (!isset($_SESSION['initiated']))
     session_regenerate_id();
     $_SESSION['initiated'] = 1;
 }
-
 $conn = utilities::databaseCreation($hn, $un, $pw, $db);
 if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_ADDR'] .
         $_SERVER['HTTP_USER_AGENT'])) {
@@ -134,30 +133,5 @@ function storeLine($value, $conn, $modelName)
         $result = $conn->query($query);
         if (!$result) die("insert of file plot failed" . $conn->error);
         $result->close();
-    }
-}
-
-function create_coordinate_list($value, &$arrX, &$arrY)
-{
-    //for x values
-    if(preg_match_all("/\(\s*\d*?\s*\,/", $value, $xs))
-    {
-        foreach ($xs as $row)
-        {
-            for($i = 0; $i < sizeof($row); $i++)
-            {
-                $arrX[$i] = substr($row[$i], 1, -1);
-            }
-        }
-    }
-    if(preg_match_all("/\,\s*\d*?\s*\)/", $value, $ys))
-    {
-        foreach ($ys as $row)
-        {
-            for($i = 0; $i < sizeof($row); $i++)
-            {
-                $arrY[$i] = substr($row[$i], 1, -1);
-            }
-        }
     }
 }

@@ -25,13 +25,41 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
         $_SERVER['HTTP_USER_AGENT'])) {
     $conn = utilities::databaseCreation($hn, $un, $pw, $db);
 
-    if(isset($_POST['model_name']) && isset($_POST["test_coordinate"]))
+    if(isset($_POST['model_name']) && isset($_POST["test_coordinate"]) && isset($_POST["test_coordinate"]) !== "")
     {
+        echo "ENTERING INDIVIDUAL";
         $model_name = utilities::sanitizeMySQL($conn, $_POST['model_name']);
         $input_coordinate = $_POST["test_coordinate"];
+        $k = $_POST["cluster_number"];
         $test_coordinate = utilities::sanitizeMySQL($conn, $input_coordinate);
-        $nearest_cluster = calculateNearestCentroid($conn, $user_id, $model_name, $test_coordinate);
-        if($nearest_cluster != null) echo "Nearest cluster centroid is where X: " . $nearest_cluster->get_X() . " Y: " . $nearest_cluster->get_Y();
+        $coordinates = str_to_coordinates($conn, $test_coordinate);
+        $nearest_clusters = calculateNearestCentroid($conn, $coordinates, $user_id, $model_name, $k);
+        if($nearest_clusters != null)
+        {
+            for($i = 0; $i < sizeof($nearest_clusters); $i++)
+            {
+                echo "Coordinate (" . $coordinates[$i]->get_X() . ", " . $coordinates[$i]->get_Y() . ")'s Nearest Centroid is where X: " . $nearest_clusters[$i]->get_X() . " Y: " . $nearest_clusters[$i]->get_Y() . "<br>";
+
+            }
+        }
+    }
+
+    if(isset($_POST['model_name']) && is_uploaded_file($_FILES["test_file"]["tmp_name"]))
+    {
+        echo "ENTERING FILE";
+        $model_name = utilities::sanitizeMySQL($conn, $_POST['model_name']);
+        $k = $_POST["cluster_number"];
+        $coordinates_str = readFileContents($conn);
+        $coordinates = str_to_coordinates($conn, $coordinates_str);
+        $nearest_clusters = calculateNearestCentroid($conn, $coordinates, $user_id, $model_name, $k);
+        if($nearest_clusters != null)
+        {
+            for($i = 0; $i < sizeof($nearest_clusters); $i++)
+            {
+                echo "Coordinate (" . $coordinates[$i]->get_X() . ", " . $coordinates[$i]->get_Y() . ")'s Nearest Centroid is where X: " . $nearest_clusters[$i]->get_X() . " Y: " . $nearest_clusters[$i]->get_Y() . "<br>";
+
+            }
+        }
     }
 
     echo <<< _END
@@ -44,7 +72,15 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
                 Model name of Clusters: <input type="text" name="model_name">
                 <br>
                 <br>
-                Enter Data and See which Cluster: <input type="text" name="test_coordinate">
+                Choose a file to See Which Clusters (.txt files only): <input type="file" name="test_file">
+                <br>
+                OR
+                <br>
+                Enter Data and See which Clusters: <input type="text" name="test_coordinate">
+                <br>
+                <br>
+                <br>
+                Number of Clusters for this Model: <input type="number" name="cluster_number">
                 <br>
                 <br>
                 <input type="submit" value="Find Closest Centroid">
@@ -57,49 +93,82 @@ _END;
     echo "You are not allowed to access this page without authentication";
 }
 
-function calculateNearestCentroid($conn, $userId, $model_name_choice, $test_coordinate)
+function calculateNearestCentroid($conn, $coordinates, $user_id, $model_name, $k)
 {
-    $coordinate = extractUserTestData($conn, $test_coordinate);
-    $query = "SELECT * FROM centroids WHERE userId = '$userId' AND modelName = '$model_name_choice'";
+    $nearest_clusters = [];
+    $query = "SELECT * FROM centroids WHERE userId = '$user_id' AND modelName = '$model_name' AND k = '$k'";
     $result = $conn->query($query);
     $rows = $result->num_rows;
+
     if($rows == 0)
     {
         utilities::mysql_fatal_error("No data found on these specifications", $conn);
         return null;
     }
-    $minDistance = PHP_INT_MAX;
-    $nearest_cluster = null;
-    for($j = 0; $j < $rows; ++$j)
+    if($coordinates == null)
     {
-        $result->data_seek($j);
-        $row = $result->fetch_array(MYSQLI_NUM);
-        $centroid_coordinate = new coordinate($row[3], $row[4]);
-        $distance = utilities::get_euclidean_distance($coordinate, $centroid_coordinate);
-        if($distance < $minDistance)
+        utilities::mysql_fatal_error("No test coordinates found", $conn);
+        return null;
+    }
+
+    for($i = 0; $i < sizeof($coordinates); $i++)
+    {
+        $minDistance = PHP_INT_MAX;
+        $nearest_cluster = null;
+        for($j = 0; $j < $rows; ++$j)
         {
-            $nearest_cluster = $centroid_coordinate;
-            $minDistance = $distance;
+            $result->data_seek($j);
+            $row = $result->fetch_array(MYSQLI_NUM);
+            $centroid_coordinate = new coordinate($row[3], $row[4]);
+            $distance = utilities::get_euclidean_distance($coordinates[$i], $centroid_coordinate);
+            if($distance < $minDistance)
+            {
+                $nearest_cluster = $centroid_coordinate;
+                $minDistance = $distance;
+            }
         }
+        $nearest_clusters[$i] = $nearest_cluster;
     }
     $result->close();
-    if($nearest_cluster == null) utilities::mysql_fatal_error("No closest clusters check data", $conn);
-    return $nearest_cluster;
+    return $nearest_clusters;
 }
 
-function extractUserTestData($conn, $test_coordinate)
+function readFileContents($conn)
 {
-    $x = [];
-    $y = [];
-    if(!preg_match("/\(\s*\d*?\s*\,/", $test_coordinate, $x)) {
-        utilities::mysql_fatal_error("Can not find x values", $conn);
+    if (file_exists($_FILES["test_file"]["tmp_name"])) {
+        if ($_FILES['test_file']['type'] !== "text/plain") {
+            utilities::mysql_fatal_error("Not a text file", $conn);
+            return;
+        }
+
+        $name = $_FILES["test_file"]["tmp_name"];
+        $fp = fopen($name, 'r');
+        $content = fread($fp, filesize($name));
+        $lines = explode("\n", $content);
+        fclose($fp);
+
+        $line_str = "";
+        foreach ($lines as $line)
+        {
+            $sanitized_line = utilities::sanitizeMySQL($conn, $line);
+            $line_str .= $sanitized_line;
+        }
+        return $line_str;
     }
-    if(!preg_match("/\,\s*\d*?\s*\)/", $test_coordinate, $y))
-    {
-        utilities::mysql_fatal_error("Can not find y values", $conn);
+}
+
+function str_to_coordinates($conn, $test_coordinate)
+{
+    $x = utilities::create_coordinate_x($test_coordinate);
+    $y = utilities::create_coordinate_y($test_coordinate);
+    $coordinates = [];
+    if(sizeof($x) == sizeof($y)) {
+        for ($i = 0; $i < sizeof($x); $i++) {
+            $coordinates[$i] = new coordinate($x[$i], $y[$i]);
+        }
+        return $coordinates;
     }
-    $x_coordinate = substr($x[0], 1, -1);
-    $y_coordinate = substr($y[0], 1, -1);
-    $coordinate = new coordinate($x_coordinate, $y_coordinate);
-    return $coordinate;
+    else{
+        return null;
+    }
 }
