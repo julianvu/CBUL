@@ -25,7 +25,7 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
         $_SERVER['HTTP_USER_AGENT'])) {
     $conn = utilities::databaseCreation($hn, $un, $pw, $db);
 
-    if(isset($_POST['model_name']) && isset($_POST["test_coordinate"]) && isset($_POST["test_coordinate"]) !== "")
+    if(isset($_POST['model_name']) && isset($_POST["test_coordinate"]) && $_POST["test_coordinate"] !== "")
     {
         echo "ENTERING INDIVIDUAL";
         $model_name = utilities::sanitizeMySQL($conn, $_POST['model_name']);
