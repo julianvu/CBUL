@@ -98,7 +98,7 @@ function k_means($conn, $user_id, $clusterNumber)
         $result = $conn->query($query);
         if(!$result) utilities::mysql_fatal_error("Can not insert centroids", $conn);
     }
-    $result->close();
+    //$result->close();
 }
 
 function relocate_by_classification(&$coordinates, &$centroids)
@@ -159,7 +159,7 @@ function extract_data($conn, $cluster_number, $model_name_choice)
         $coordinate = new coordinate($row[0], $row[1]);
         array_push($coordinates, $coordinate);
     }
-    $result->close();
+    //$result->close();
     return $coordinates;
 }
 

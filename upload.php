@@ -29,7 +29,7 @@ if (!isset($_SESSION['initiated']))
 $conn = utilities::databaseCreation($hn, $un, $pw, $db);
 if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_ADDR'] .
         $_SERVER['HTTP_USER_AGENT'])) {
-    upload($conn);
+    upload($conn, $user_id);
 
     echo <<< _END
         <html>
@@ -38,6 +38,11 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
         </head>
         <body>
             <form method="post" action="upload.php" enctype="multipart/form-data">
+                <h2>Format input with: "(" + 'x value' + "," + 'y value' + + ")"</h2>
+                <h4>Such as (1, 1) or (1 , 1)</h4>
+                <h4>This can handle multiple coordinate inputs</h4>
+                <h4>Input X and Y values must fall in between 0 to 500</h4>
+                <br>
                 Choose a model from computer (.txt files only): <input type="file" name="model_to_upload">
                 <br>
                 <br>
@@ -63,7 +68,7 @@ _END;
 }
 $conn->close();
 
-function readFileContents($conn, $model_name)
+function readFileContents($conn, $model_name, $user_id)
 {
     if (is_uploaded_file($_FILES["model_to_upload"]["tmp_name"]) && file_exists($_FILES["model_to_upload"]["tmp_name"])) {
         $temp_file = $_FILES["model_to_upload"]["name"];
@@ -81,7 +86,7 @@ function readFileContents($conn, $model_name)
         foreach ($lines as $line)
         {
             $sanitized_line = utilities::sanitizeMySQL($conn, $line);
-            storeLine($sanitized_line, $conn, $model_name);
+            storeLine($sanitized_line, $conn, $model_name, $user_id);
         }
     }
 }
@@ -93,8 +98,9 @@ function readFileContents($conn, $model_name)
  * the database. 
  *
  * @param $conn     MySQL connection
+ * @param $user_id  User Id passed
  */
-function upload($conn) {
+function upload($conn, $user_id) {
     $model_name = "";
     if (isset($_POST["model_name"])) {
         $model_name = utilities::sanitizeMySQL($conn, $_POST["model_name"]);
@@ -102,16 +108,16 @@ function upload($conn) {
 
     if (isset($_POST["model_content"]) && $model_name != "") {
         $model_content = utilities::sanitizeMySQL($conn, $_POST["model_content"]);
-        storeLine($model_content, $conn, $model_name);
+        storeLine($model_content, $conn, $model_name, $user_id);
     }
 
     if(isset($_POST['model_name']))
     {
-        readFileContents($conn, $model_name);
+        readFileContents($conn, $model_name, $user_id);
     }
 }
 
-function storeLine($value, $conn, $modelName)
+function storeLine($value, $conn, $modelName, $user_id)
 {
     $arr_coordinates = [];
     $arrX = utilities::create_coordinate_x($value);
@@ -125,13 +131,13 @@ function storeLine($value, $conn, $modelName)
         }
     } else die("The number of x inputs and y inputs do not match");
 
-    $user_id = $_SESSION['id'];
-    for ($i = 0; $i < sizeof($arrX); $i++) {
+
+    $result = null;
+    for ($i = 0; $i < sizeof($arr_coordinates); $i++) {
         $x_value = $arr_coordinates[$i]->get_x();
         $y_value = $arr_coordinates[$i]->get_y();
         $query = "INSERT INTO userDataPlots (x, y, userId, modelName) VALUES('$x_value', '$y_value', '$user_id', '$modelName')";
         $result = $conn->query($query);
-        if (!$result) die("insert of file plot failed" . $conn->error);
-        $result->close();
+        if (!$result) utilities::mysql_fatal_error("Insertion for ". " $x_value " . ", $y_value" . " failed", $conn);
     }
 }

@@ -27,10 +27,13 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
 
     if(isset($_POST['model_name']) && isset($_POST["test_coordinate"]) && $_POST["test_coordinate"] !== "")
     {
-        echo "ENTERING INDIVIDUAL";
         $model_name = utilities::sanitizeMySQL($conn, $_POST['model_name']);
         $input_coordinate = $_POST["test_coordinate"];
         $k = $_POST["cluster_number"];
+        if(is_int($k))
+        {
+            utilities::mysql_fatal_error("Cluster number input must be a number", $conn);
+        }
         $test_coordinate = utilities::sanitizeMySQL($conn, $input_coordinate);
         $coordinates = str_to_coordinates($conn, $test_coordinate);
         $nearest_clusters = calculateNearestCentroid($conn, $coordinates, $user_id, $model_name, $k);
@@ -46,7 +49,6 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
 
     if(isset($_POST['model_name']) && is_uploaded_file($_FILES["test_file"]["tmp_name"]))
     {
-        echo "ENTERING FILE";
         $model_name = utilities::sanitizeMySQL($conn, $_POST['model_name']);
         $k = $_POST["cluster_number"];
         $coordinates_str = readFileContents($conn);
@@ -80,7 +82,7 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
                 <br>
                 <br>
                 <br>
-                Number of Clusters for this Model: <input type="number" name="cluster_number">
+                Number of Clusters for this Model: <input type="number" name="cluster_number" min = "1" max = "10">
                 <br>
                 <br>
                 <input type="submit" value="Find Closest Centroid">
