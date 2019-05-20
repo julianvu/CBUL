@@ -105,8 +105,9 @@ class utilities
      * @param $string string to hash
      * @return string hashed string
      */
-    public static function hashPassword($string, $salt1, $salt2){
-        return hash('ripemd128', $salt1.$string.$salt2);
+    public static function hashPassword($string, $salt1, $salt2)
+    {
+        return hash('ripemd128', $salt1 . $string . $salt2);
 
     }
 
@@ -119,7 +120,8 @@ class utilities
      * @param $conn  Database
      * @return ID of User
      */
-    public static function findUser($username, $conn) {
+    public static function findUser($username, $conn)
+    {
         // $email = sanitizeMySQL($conn, $email);
 
         $sql = "SELECT * FROM USER WHERE username = '$username'";
@@ -145,7 +147,7 @@ _END;
 
     public static function mysql_fix_string($connection, $string)
     {
-        if(get_magic_quotes_gpc()) $string = stripcslashes($string);
+        if (get_magic_quotes_gpc()) $string = stripcslashes($string);
         return $connection->real_escape_string($string);
     }
 

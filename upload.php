@@ -38,6 +38,10 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
         </head>
         <body>
             <form method="post" action="upload.php" enctype="multipart/form-data">
+                EM Model <input type="radio" name="model_type" value="EM">
+                K-Means Model <input type="radio" name="model_type" value="K-Means">
+                <br>
+                <br>
                 <h2>Format input with: "(" + 'x value' + "," + 'y value' + + ")"</h2>
                 <h4>Such as (1, 1) or (1 , 1)</h4>
                 <h4>This can handle multiple coordinate inputs</h4>
@@ -59,6 +63,10 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
             <form method="post" action="train.php">
                 <input type="submit" value="Go To Train">
             </form>
+            <form method="post" action="train_em.php">
+                <input type="submit" value="Go to EM Training">
+            </form>
+            
             
         </body>
         </html>
@@ -81,12 +89,20 @@ function readFileContents($conn, $model_name, $user_id)
         $name = $_FILES["model_to_upload"]["tmp_name"];
         $fp = fopen($name, 'r');
         $content = fread($fp, filesize($name));
-        $lines = explode("\n", $content);
         fclose($fp);
-        foreach ($lines as $line)
-        {
-            $sanitized_line = utilities::sanitizeMySQL($conn, $line);
-            storeLine($sanitized_line, $conn, $model_name, $user_id);
+        if (isset($_POST["model_type"])) {
+            if ($_POST["model_type"] == "K-Means") {
+                $lines = explode("\n", $content);
+                foreach ($lines as $line)
+                {
+                    $sanitized_line = utilities::sanitizeMySQL($conn, $line);
+                    storeLine($sanitized_line, $conn, $model_name, $user_id);
+                }
+            }
+            else {
+                $content = utilities::sanitizeMySQL($conn, $content);
+                store_EM_model($conn, $content);
+            }
         }
     }
 }
@@ -115,6 +131,21 @@ function upload($conn, $user_id) {
     {
         readFileContents($conn, $model_name, $user_id);
     }
+}
+
+function store_EM_model($conn, $sanitized_content) {
+    $lines = explode("n", $sanitized_content);
+    $matrix = array();
+    for ($i = 0; $i < sizeof($lines); ++$i) {
+        $line = explode(",", $lines[$i]);
+        $matrix[$line[0]] = $line[1];
+    }
+    $serialized_array = serialize($matrix);
+    $model_name = utilities::sanitizeMySQL($conn, $_POST["model_name"]);
+    $user_id = $_SESSION['id'];
+    $query = "INSERT INTO em_data VALUES" . "('$serialized_array', '$user_id', '$model_name')";
+    $result = $conn->query($query);
+    if (!$result) die("EM insertion failed" . $conn->error);
 }
 
 function storeLine($value, $conn, $modelName, $user_id)
