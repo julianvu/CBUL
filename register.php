@@ -29,20 +29,54 @@ function register($conn)
         header("Location: sign-up.php");
 
     } else {
-
+        $error = "";
+        $error .= validateName($username);
+        $error .= validatePassword($password);
         //check if user has an account or not with given username
-        if ($user_id == null) {
+        if ($user_id == null && $error == "") {
             addUser($username, $email, $password, $conn);
             $_SESSION['err_mess'] = "successfully created new account";
             header("Location: sign-in.php");
 
         } else {
-            $_SESSION['err_mess'] = "Username already exists. Choose another username that does not have an account";
-            header("Location: sign-up.php");
+            if($error != "") {
+                $_SESSION['err_mess'] = "Username already exists. Choose another username that does not have an account";
+                header("Location: sign-up.php");
+            }else{
+                $_SESSION['err_mess'] = error;
+                header("Location: sign-up.php");
+            }
+
 
         }
     }
 }
+function validatePassword($field)
+{
+    $regex = "/[^a-zA-Z0-9-_!$\/%@#]/";
+
+    if ($field == "")
+        return "Password is required. ";
+    else if (strlen($field)  < 5)
+        return "Password must must be at least 5 characters. ";
+    else if (preg_match($regex,$field))
+        return "Only a-z, A-Z, 0-9, !, $, /, %, @ and # allowed in Password. ";
+    return "";
+}
+function validateName($field)
+{
+    $regex = "/[^a-zA-Z0-9]_-/";
+
+    if ($field == "")
+        return "UserName is required. ";
+    else if (strlen($field) < 5)
+        return "Username must must be at least 5 characters. ";
+    else if (preg_match($regex,$field))
+        return "Only a-z, A-Z, 0-9, - and _ allowed in UserName. ";
+    return "";
+}
+
+
 
 /**
  * add user to database
@@ -60,11 +94,12 @@ function addUser($username,$email, $password, $conn)
     $hashPassword = utilities::hashPassword($password, $salt, $saltier);
     $query = "INSERT INTO USER (username,email,password, salty, saltier) VALUES('$username','$email','$hashPassword', '$salt', '$saltier')";
     $result = $conn->query($query);
-    if (!$result) die("insert failed".$conn->error);
+    if (!$result) utilities::mysql_fatal_error("Cannot add User", $conn);
 
 }
 
 
 $conn = utilities::databaseCreation($hn,$un,$pw,$db);
 register($conn);
+$conn->close();
 

@@ -64,7 +64,7 @@ function isPassword($id, $inputPassword, $conn){
     $result = $conn->query(sprintf($query, $id));
     if (!$result) return;
     $row = $result->fetch_assoc() or die($conn->error);
-
+    $result->close();
     return ($row['password'] === utilities::hashPassword($inputPassword,$row['salty'], $row['saltier']));
 }
 
@@ -82,10 +82,9 @@ function loginUser($id)
     ini_set('session.gc_maxlifetime', 60 * 60 * 24);
     header("Location:upload.php");
     die();
-
-
 }
 
 
 $conn = utilities::databaseCreation($hn,$un,$pw,$db);
 authenticate($conn);
+$conn->close();
