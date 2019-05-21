@@ -26,7 +26,7 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
         <title>CBUL - Train a Model using EM</title>
         </head>
         <body>
-        <form method="post" action="train_em.php">
+        <form method="post" action="test_em.php">
         <h1>Let's Train a Model</h1>
             <br>
             Number of clusters <input type = "number" name = "cluster_count" min = "1" max = "10">
@@ -35,7 +35,8 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
             Clusters built from which model <input type = "text" name = "model_name">
             <br>
             <br>
-            <input type="submit" value="Go To Test">
+        <input type="submit" value="Go To EM Testing">
+
         </form> 
         </body>
 _END;
@@ -50,17 +51,41 @@ _END;
     echo "You are not allowed to access this page without authentication";
 }
 
-function begin_em($conn) {
-    $model_name = utilities::sanitizeMySQL($conn, $_POST["model_name"]);
-    $cluster_count = utilities::sanitizeMySQL($conn, $_POST["cluster_count"]);
-    if(!is_int($cluster_count) && $cluster_count > 10) die ("Cluster size is invalid");
+    function begin_em($conn) {
+        $model_name = utilities::sanitizeMySQL($conn, $_POST["model_name"]);
+        $cluster_count = utilities::sanitizeMySQL($conn, $_POST["cluster_count"]);
+        if(!is_int($cluster_count) && $cluster_count > 10) die ("Cluster size is invalid");
 
-    $data_array = extract_data($conn, $model_name);
-    $size_m = sizeof($data_array);
-    $size_n = 1;
+        // Extract Data from Database
+//    $data_array = extract_data($conn, $model_name);
+//    $size_m = sizeof($data_array);
+//    $size_n = sizeof($data_array[0]);
 
-//    $mean_array = randomize_array(0, 1, $cluster_count * $size_n);
-}
+        // Use randomly generated data
+        $data_array = generate_data(100);
+    }
+
+    /**
+     * Generates data
+     *
+     * This function generates the same data every time for reproducibility. The proper implementation would
+     * actually generate random values.
+     * @param $number_of_points     Number of Points per cluster
+     */
+    function generate_data($number_of_points) {
+        $mu1 = array(0, 5);
+        $mu2 = array(5, 0);
+        $sigma1 = array(
+            array(2, 0),
+            array(0, 3),
+        );
+        $sigma2 = array(
+            array(4, 0),
+            array(0, 1),
+        );
+
+
+    }
 
 function train_EM($data_input, $params_input) {
     $shift = PHP_FLOAT_MAX;
