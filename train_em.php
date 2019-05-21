@@ -62,6 +62,89 @@ function begin_em($conn) {
 //    $mean_array = randomize_array(0, 1, $cluster_count * $size_n);
 }
 
+function train_EM($data_input, $params_input) {
+    $shift = PHP_FLOAT_MAX;
+    $epsilon = 0.001; // precision
+
+    $data = $data_input;
+    $params = $params_input;
+
+    for ($i = 0; $shift > $epsilon; ++$i) {
+        // Expectation Step
+        $data_from_e_step = expectation($data, $params);
+
+        // Maximization Step
+        $params_from_m_step = maximization($data_from_e_step, $params);
+
+        // Re-calculate shift (distance/error) from previous set of parameters
+        $shift = find_distance($params, $params_from_m_step);
+
+        $data = $data_from_e_step;
+        $params = $params_from_m_step;
+    }
+    return array($data, $params);
+}
+
+function expectation($data_input, $params_input) {
+    $data = $data_input;
+    for ($i = 0; $i < sizeof($data[0]); ++$i) {
+        $x = $data[$i][0];
+        $prob_cluster1 = prob($x, $params_input["mu1"], $params_input["sigma1"], ($params_input["lambda"])[0][0]);
+        $prob_cluster2 = prob($x, $params_input["mu2"], $params_input["sigma2"], ($params_input["lambda"])[0][1]);
+
+        if ($prob_cluster1 > $prob_cluster2) {
+            $data[$i][3] = 1;
+        }
+        else {
+            $data[$i][3] = 2;
+        }
+    }
+    return $data;
+}
+
+function prob($point, $mu, $sigma, $lambda) {
+    $prob = $lambda;
+    for ($i = 0; $i < sizeof($point), ++$i) {
+        $prob = $prob * normpdf($point[0][$i], $mu[0][$i], $sigma[$i][$i]);
+    }
+    return $prob;
+}
+
+function normpdf($x, $mean, $sigma) {
+    $z = ($x - $mean) / $sigma;
+    $y = (1.0 / ($sigma * sqrt(2.0 * pi()))) * exp(-0.5 * $z * $z);
+    return doubleval($y);
+}
+
+function maximization($data_input, $params_input) {
+    $data = $data_input;
+    $params = $params_input;
+
+    $points_in_cluster1 = find_clusters($data, 1);
+    $points_in_cluster2 = find_clusters($data, 2);
+
+    $percent_cluster1 = sizeof($points_in_cluster1) / sizeof(data);
+    $percent_cluster2 = 1.0 - $percent_cluster1;
+
+    $params["lambda"] = [$percent_cluster1, $percent_cluster2];
+    $mu1_1 = array_sum($points_in_cluster1[][0]) / sizeof($points_in_cluster1[][0]);
+    $mu1_2 = array_sum($points_in_cluster1[][1]) / sizeof($points_in_cluster1[][1]);
+    $mu2_1 = array_sum($points_in_cluster2[][0]) / sizeof($points_in_cluster2[][0]);
+    $mu2_2 = array_sum($points_in_cluster2[][1]) / sizeof($points_in_cluster2[][1]);
+
+    $params["mu1"] = [];
+}
+
+function find_clusters($data, $cluster_number) {
+    $to_return = array();
+    for ($i = 0; $i < sizeof($data); ++$i) {
+        if ($data[$i][2] == $cluster_number) {
+            array_push($to_return, $data[$i][2]);
+        }
+    }
+    return $to_return;
+}
+
 function randomize_array($min, $max, $size) {
     $to_return = range($min, $max, 0.000001);
     $to_return = shuffle($to_return);
