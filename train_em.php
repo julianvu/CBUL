@@ -26,7 +26,7 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
         <title>CBUL - Train a Model using EM</title>
         </head>
         <body>
-        <form method="post" action="train_em.php">
+        <form method="post" action="test_em.php">
         <h1>Let's Train a Model</h1>
             <br>
             Number of clusters <input type = "number" name = "cluster_count" min = "1" max = "10">
@@ -35,7 +35,8 @@ if($user_id != '' && $_SESSION['check'] == hash('ripemd128', $_SERVER['REMOTE_AD
             Clusters built from which model <input type = "text" name = "model_name">
             <br>
             <br>
-            <input type="submit" value="Go To Test">
+        <input type="submit" value="Go To EM Testing">
+
         </form> 
         </body>
 _END;
@@ -50,17 +51,41 @@ _END;
     echo "You are not allowed to access this page without authentication";
 }
 
-function begin_em($conn) {
-    $model_name = utilities::sanitizeMySQL($conn, $_POST["model_name"]);
-    $cluster_count = utilities::sanitizeMySQL($conn, $_POST["cluster_count"]);
-    if(!is_int($cluster_count) && $cluster_count > 10) die ("Cluster size is invalid");
+    function begin_em($conn) {
+        $model_name = utilities::sanitizeMySQL($conn, $_POST["model_name"]);
+        $cluster_count = utilities::sanitizeMySQL($conn, $_POST["cluster_count"]);
+        if(!is_int($cluster_count) && $cluster_count > 10) die ("Cluster size is invalid");
 
-    $data_array = extract_data($conn, $model_name);
-    $size_m = sizeof($data_array);
-    $size_n = 1;
+        // Extract Data from Database
+//    $data_array = extract_data($conn, $model_name);
+//    $size_m = sizeof($data_array);
+//    $size_n = sizeof($data_array[0]);
 
-//    $mean_array = randomize_array(0, 1, $cluster_count * $size_n);
-}
+        // Use randomly generated data
+        $data_array = generate_data(100);
+    }
+
+    /**
+     * Generates data
+     *
+     * This function generates the same data every time for reproducibility. The proper implementation would
+     * actually generate random values.
+     * @param $number_of_points     Number of Points per cluster
+     */
+    function generate_data($number_of_points) {
+        $mu1 = array(0, 5);
+        $mu2 = array(5, 0);
+        $sigma1 = array(
+            array(2, 0),
+            array(0, 3),
+        );
+        $sigma2 = array(
+            array(4, 0),
+            array(0, 1),
+        );
+
+
+    }
 
 function train_EM($data_input, $params_input) {
     $shift = PHP_FLOAT_MAX;
@@ -77,7 +102,7 @@ function train_EM($data_input, $params_input) {
         $params_from_m_step = maximization($data_from_e_step, $params);
 
         // Re-calculate shift (distance/error) from previous set of parameters
-        $shift = find_distance($params, $params_from_m_step);
+        $shift = calc_error($params, $params_from_m_step);
 
         $data = $data_from_e_step;
         $params = $params_from_m_step;
@@ -104,7 +129,7 @@ function expectation($data_input, $params_input) {
 
 function prob($point, $mu, $sigma, $lambda) {
     $prob = $lambda;
-    for ($i = 0; $i < sizeof($point), ++$i) {
+    for ($i = 0; $i < sizeof($point); ++$i) {
         $prob = $prob * normpdf($point[0][$i], $mu[0][$i], $sigma[$i][$i]);
     }
     return $prob;
@@ -127,12 +152,56 @@ function maximization($data_input, $params_input) {
     $percent_cluster2 = 1.0 - $percent_cluster1;
 
     $params["lambda"] = [$percent_cluster1, $percent_cluster2];
-    $mu1_1 = array_sum($points_in_cluster1[][0]) / sizeof($points_in_cluster1[][0]);
-    $mu1_2 = array_sum($points_in_cluster1[][1]) / sizeof($points_in_cluster1[][1]);
-    $mu2_1 = array_sum($points_in_cluster2[][0]) / sizeof($points_in_cluster2[][0]);
-    $mu2_2 = array_sum($points_in_cluster2[][1]) / sizeof($points_in_cluster2[][1]);
 
-    $params["mu1"] = [];
+    $mu1_1_points = get_points($points_in_cluster1, 0);
+    $mu1_2_points = get_points($points_in_cluster1, 1);
+    $mu2_1_points = get_points($points_in_cluster2, 0);
+    $mu2_2_points = get_points($points_in_cluster2, 1);
+
+    $mu1_1 = array_sum($mu1_1_points) / sizeof($mu1_1_points);
+    $mu1_2 = array_sum($mu1_2_points) / sizeof($mu1_2_points);
+    $mu2_1 = array_sum($mu2_1_points) / sizeof($mu2_1_points);
+    $mu2_2 = array_sum($mu2_2_points) / sizeof($mu2_2_points);
+
+    $params["mu1"] = array($mu1_1, $mu1_2);
+    $params["mu2"] = array($mu2_1, $mu2_2);
+
+    $sigma1_1 = standard_deviation($mu1_1_points);
+    $sigma1_2 = standard_deviation($mu1_2_points);
+    $sigma2_1 = standard_deviation($mu2_1_points);
+    $sigma2_2 = standard_deviation($mu2_2_points);
+
+    $params["sigma1"] = array(
+        array($sigma1_1, 0),
+        array(0, $sigma1_2),
+    );
+
+    $params["sigma2"] = array(
+        array($sigma2_1, 0),
+        array(0, $sigma2_2),
+    );
+
+    return $params;
+}
+
+function get_points($cluster_array, $cluster_number) {
+    $to_return = array();
+    foreach ($cluster_array as $array) {
+        array_push($to_return, $array[$cluster_number]);
+    }
+    return $to_return;
+}
+
+function standard_deviation($data) {
+    $count = sizeof($data);
+    $variance = 0.0;
+    $mean = array_sum($data)/$count;
+
+    foreach ($data as $i) {
+        $variance += pow(($i - $mean), 2);
+    }
+
+    return (float)sqrt($variance/$count);
 }
 
 function find_clusters($data, $cluster_number) {
@@ -143,6 +212,16 @@ function find_clusters($data, $cluster_number) {
         }
     }
     return $to_return;
+}
+
+function calc_error($old_params, $new_params) {
+    $mu1_rss = pow(($old_params["mu1"])[0][0] - ($new_params["mu1"])[0][0], 2);
+    $mu2_rss = pow(($old_params["mu1"])[1][1] - ($new_params["mu1"])[1][1], 2);
+    return (float)sqrt($mu1_rss + $mu2_rss);
+}
+
+function norm($vector) {
+
 }
 
 function randomize_array($min, $max, $size) {
