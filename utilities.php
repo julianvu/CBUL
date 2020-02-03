@@ -127,7 +127,8 @@ class utilities
         $sql = "SELECT * FROM USER WHERE username = '$username'";
         $result = $conn->query($sql) or die($conn->error);
         $row = $result->fetch_assoc();
-        return $row['id'];
+        //return $row['id'];
+        return mysqli_num_rows($result) == 0 ? null : $row['id'];
     }
 
     /**

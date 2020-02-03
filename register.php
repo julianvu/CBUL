@@ -89,8 +89,8 @@ function validateName($field)
  */
 function addUser($username,$email, $password, $conn)
 {
-    $salt = random_bytes(5);
-    $saltier = random_bytes(5);
+    $salt = var_dump(bin2hex(random_bytes(3)));
+    $saltier = var_dump(bin2hex(random_bytes(3)));
     $hashPassword = utilities::hashPassword($password, $salt, $saltier);
     $query = "INSERT INTO USER (username,email,password, salty, saltier) VALUES('$username','$email','$hashPassword', '$salt', '$saltier')";
     $result = $conn->query($query);

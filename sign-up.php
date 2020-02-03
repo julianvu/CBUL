@@ -52,7 +52,6 @@ function validate(form)
     if (fail == "") {
         return true
     } else {
-        alert(fail);
         return false
     }
 }
